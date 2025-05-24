@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Twitify: Chat Mention Alerts",
+  "version": "0.1.0",
+  "description": "Уведомления при упоминании вас в чате Twitch",
+  "permissions": ["scripting", "activeTab"],
+  "host_permissions": ["https://www.twitch.tv/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.twitch.tv/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["alert.mp3"],
+      "matches": ["https://www.twitch.tv/*"]
+    }
+  ],
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+}
