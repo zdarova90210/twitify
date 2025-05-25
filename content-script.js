@@ -1,55 +1,52 @@
 (async function () {
-  const YOUR_NICK = 'zdarova90210';
+  const YOUR_NICK       = 'zdarova90210';
   const YOUR_NICK_LOWER = YOUR_NICK.toLowerCase();
+  const MENTION_SELECTOR = '[data-a-target="chat-message-mention"], .reply-line--mentioned';
 
+  // звук алерта
   const alertSound = new Audio(chrome.runtime.getURL('alert.mp3'));
   alertSound.volume = 1;
-
-  function handleMessage(msgEl) {
-    // 1) @-упоминания
-    const mentionEls = msgEl.querySelectorAll('[data-a-target="chat-message-mention"]');
-    for (const m of mentionEls) {
-      if (m.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
-        alertSound.play().catch();
-        return;
-      }
-    }
-
-    // 2) reply — текстовая проверка “Replying to …”
-    const headerP = msgEl.querySelector('p');
-    if (headerP) {
-      const txt = headerP.textContent.trim().toLowerCase();
-      if (txt.startsWith('replying to') && txt.includes(`@${YOUR_NICK_LOWER}`)) {
-        alertSound.play().catch();
-      }
-    }
+  function playAlert() {
+    alertSound.play().catch(() => {});
   }
 
-  function observe(container) {
-    const mo = new MutationObserver(records => {
-      for (const rec of records) {
-        for (const node of rec.addedNodes) {
-          if (node.nodeType !== 1) continue;
-          if (node.matches('[data-a-target="chat-line-message"]')) {
-            handleMessage(node);
-          }
-          node.querySelectorAll?.('[data-a-target="chat-line-message"]')
-            .forEach(handleMessage);
-        }
+  function checkNode(node) {
+    if (!(node instanceof Element)) return;
+
+    // 1) сам узел — упоминание
+    if (node.matches(MENTION_SELECTOR) &&
+      node.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
+      playAlert();
+      return;
+    }
+
+    // 2) упоминания внутри
+    node.querySelectorAll(MENTION_SELECTOR).forEach(el => {
+      if (el.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
+        playAlert();
       }
     });
-    mo.observe(container, {childList: true, subtree: true});
   }
 
-  function init() {
-    const scroller = document.querySelector('[data-a-target="chat-scroller"]');
-    const container = scroller?.querySelector('[role="log"]');
-    if (container) {
-      observe(container);
-    } else {
-      setTimeout(init, 1000);
+  const mo = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      if (m.type === 'childList') {
+        m.addedNodes.forEach(checkNode);
+      }
+      else if (m.type === 'characterData') {
+        // при виртуализации Twitch может менять текст внутри уже существующих нод
+        const p = m.target.parentElement;
+        if (p && p.matches(MENTION_SELECTOR) &&
+          p.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
+          playAlert();
+        }
+      }
     }
-  }
+  });
 
-  init();
+  mo.observe(document.body, {
+    childList:     true,
+    subtree:       true,
+    characterData: true
+  });
 })();
