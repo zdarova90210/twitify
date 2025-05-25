@@ -1,52 +1,63 @@
-(async function () {
-  const YOUR_NICK       = 'zdarova90210';
-  const YOUR_NICK_LOWER = YOUR_NICK.toLowerCase();
-  const MENTION_SELECTOR = '[data-a-target="chat-message-mention"], .reply-line--mentioned';
+(async () => {
+  let nickLower;
 
-  // звук алерта
-  const alertSound = new Audio(chrome.runtime.getURL('alert.mp3'));
-  alertSound.volume = 1;
-  function playAlert() {
-    alertSound.play().catch(() => {});
+  // Функция для установки/обновления ника
+  async function updateNick() {
+    const {twitifyNick} = await chrome.storage.sync.get('twitifyNick');
+    if (twitifyNick) {
+      nickLower = twitifyNick.toLowerCase();
+      console.log('Twitify: текущий ник =', nickLower);
+    } else {
+      console.warn('Twitify: ник не задан');
+    }
   }
 
-  function checkNode(node) {
-    if (!(node instanceof Element)) return;
+  // Инициализация
+  await updateNick();
 
-    // 1) сам узел — упоминание
-    if (node.matches(MENTION_SELECTOR) &&
-      node.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
-      playAlert();
-      return;
+  // Слушаем изменения хранилища
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.twitifyNick) {
+      nickLower = changes.twitifyNick.newValue.toLowerCase();
+      console.log('Twitify: ник обновлён на', nickLower);
     }
+  });
 
-    // 2) упоминания внутри
-    node.querySelectorAll(MENTION_SELECTOR).forEach(el => {
-      if (el.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
-        playAlert();
-      }
+  // Поиск контейнера чата
+  const chat = document.querySelector('[data-test-selector="chat-scroller-list"]') || document.body;
+
+  // Настройка звука
+  const audio = new Audio(chrome.runtime.getURL('alert.mp3'));
+  document.body.addEventListener('click', () => {
+    audio.play().then(() => audio.pause()).catch(() => {
+    });
+  }, {once: true});
+
+  function play() {
+    audio.currentTime = 0;
+    audio.play().catch(() => {
     });
   }
 
-  const mo = new MutationObserver(mutations => {
-    for (const m of mutations) {
-      if (m.type === 'childList') {
-        m.addedNodes.forEach(checkNode);
-      }
-      else if (m.type === 'characterData') {
-        // при виртуализации Twitch может менять текст внутри уже существующих нод
-        const p = m.target.parentElement;
-        if (p && p.matches(MENTION_SELECTOR) &&
-          p.textContent.trim().toLowerCase() === `@${YOUR_NICK_LOWER}`) {
-          playAlert();
-        }
-      }
+  // Обработка новых узлов
+  function check(node) {
+    if (!nickLower || !(node instanceof Element)) return;
+    const text = node.textContent.toLowerCase();
+    if (text.includes(`@${nickLower}`)) {
+      play();
+      return;
     }
-  });
+    node.querySelectorAll('[data-a-target="chat-message-mention"], .reply-line--mentioned')
+      .forEach(el => {
+        if (el.textContent.toLowerCase().startsWith(`@${nickLower}`)) {
+          play();
+        }
+      });
+  }
 
-  mo.observe(document.body, {
-    childList:     true,
-    subtree:       true,
-    characterData: true
+  // Запуск MutationObserver
+  const mo = new MutationObserver(muts => {
+    muts.forEach(m => m.addedNodes.forEach(check));
   });
+  mo.observe(chat, {childList: true, subtree: true});
 })();

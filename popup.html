@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Twitify</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #18181B;
+      color: #FFFFFF;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      width: 280px;
+      padding: 16px;
+      margin: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      background-color: #202024;
+      color: #FFFFFF;
+      font-size: 14px;
+    }
+    input::placeholder {
+      color: #888;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: #9146FF;
+      color: #FFFFFF;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #772CE8;
+    }
+    #status {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 12px;
+      color: #AAA;
+    }
+  </style>
+</head>
+<body>
+<h2>Twitify</h2>
+<input type="text" id="nick" placeholder="Ваш никнейм" />
+<button id="save">Сохранить</button>
+<div id="status"></div>
+<script src="popup.js"></script>
+</body>
+</html>
